@@ -1,0 +1,6 @@
+.idea
+node_modules
+bin/ffmpeg.exe
+bin/ffplay.exe
+bin/ffprobe.exe
+.env

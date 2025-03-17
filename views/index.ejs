@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TaskForce AI - A challenge</title>
+  <link rel="stylesheet" href="/stylesheets/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script> <!-- Markdown Parser -->
+</head>
+<body>
+<div class="container">
+  <h1>TaskForce AI</h1>
+
+  <!-- Chat Section -->
+  <div class="chat-container">
+    <div id="chat-box" class="chat-box"></div>
+    <div class="loading-indicator" id="loading">AI is thinking...</div>
+    <div class="loading-indicator" id="transcribing" style="display: none;">🎙️ Transcribing...</div>
+    <div class="input-area">
+      <input type="text" id="user-input" placeholder="Type a message..." onkeypress="handleKeyPress(event)">
+      <button onclick="sendMessage()">Send</button>
+
+      <button id="record-btn">🎤 Record</button>
+    </div>
+    <div class="button-suggestions">
+      <button onclick="sendMessage('Create a New Task')">Create a New Task</button>
+      <button onclick="sendMessage('Re-Assign Overdue Tasks')">Re-Assign Overdue Tasks</button>
+      <button onclick="sendMessage('Get Performance Report')">Get Performance Report</button>
+      <button onclick="sendMessage('Send overdue notifications')">Send Overdue Notifications</button>
+    </div>
+  </div>
+
+  <!-- Task Dashboard Section -->
+  <div class="dashboard">
+    <h2>Task Dashboard</h2>
+    <div id="tasks-list" class="tasks-list"></div>
+    <div class="show-more">
+      <button id="show-more-btn" onclick="showMoreTasks()">Show More</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  let mediaRecorder;
+  let audioChunks = [];
+  let isRecording = false;
+  localStorage.setItem("userId", null);
+
+  document.getElementById("record-btn").addEventListener("click", async () => {
+    const recordButton = document.getElementById("record-btn");
+    const transcribingIndicator = document.getElementById("transcribing");
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      alert("Your browser does not support audio recording.");
+      return;
+    }
+
+    if (!isRecording) {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorder = new MediaRecorder(stream);
+      const audioContext = new AudioContext();
+      const analyser = audioContext.createAnalyser();
+      const source = audioContext.createMediaStreamSource(stream);
+      source.connect(analyser);
+      analyser.fftSize = 256;
+
+      const bufferLength = analyser.frequencyBinCount;
+      const dataArray = new Uint8Array(bufferLength);
+      let silenceStart = null;
+
+      audioChunks = [];
+
+      mediaRecorder.ondataavailable = event => {
+        audioChunks.push(event.data);
+      };
+
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+        const formData = new FormData();
+        formData.append("audio", audioBlob, "recording.webm");
+
+        transcribingIndicator.style.display = "block";
+        recordButton.classList.remove("recording");
+        recordButton.innerText = "🎤 Record";
+        isRecording = false;
+
+        try {
+          const response = await fetch("/voice/transcribe", {
+            method: "POST",
+            body: formData
+          });
+
+          const data = await response.json();
+          if (data.text) {
+            sendMessage(data.text);
+          } else {
+            alert("Transcription failed.");
+          }
+        } catch (error) {
+          console.error("Voice upload error:", error);
+          alert("Failed to upload audio.");
+        } finally {
+          transcribingIndicator.style.display = "none";
+        }
+      };
+
+      transcribingIndicator.style.display = "block";
+      recordButton.classList.add("recording");
+      recordButton.innerText = "⏹️ Stop Recording";
+      isRecording = true;
+      mediaRecorder.start();
+
+      function checkSilence() {
+        analyser.getByteFrequencyData(dataArray);
+        const volume = dataArray.reduce((a, b) => a + b) / bufferLength;
+
+        if (volume < 10) { // Adjust threshold as needed
+          if (silenceStart === null) {
+            silenceStart = Date.now();
+          } else if (Date.now() - silenceStart > 1000) { // Stop after 1s of silence
+            mediaRecorder.stop();
+            stream.getTracks().forEach(track => track.stop());
+          }
+        } else {
+          silenceStart = null; // Reset silence detection if sound is detected
+        }
+
+        if (isRecording) {
+          requestAnimationFrame(checkSilence);
+        }
+      }
+
+      checkSilence();
+    } else {
+      mediaRecorder.stop();
+      isRecording = false;
+    }
+  });
+
+  function handleKeyPress(event) {
+    if (event.key === 'Enter') {
+      sendMessage();
+    }
+  }
+
+  let userId = localStorage.getItem("userId");
+
+  async function sendMessage(text = null) {
+    const inputField = document.getElementById("user-input");
+    const chatBox = document.getElementById("chat-box");
+    const loadingIndicator = document.getElementById("loading");
+    const userMessage = text || inputField.value.trim();
+    if (!userMessage) return;
+
+    chatBox.innerHTML += `<div class="user-message">${userMessage}</div>`;
+    inputField.value = "";
+    loadingIndicator.style.display = "block";
+
+    chatBox.scrollTop = chatBox.scrollHeight;
+
+    try {
+      const response = await fetch("/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: [{ role: "user", content: userMessage }], userId })
+      });
+      const data = await response.json();
+      loadingIndicator.style.display = "none";
+
+      if (data.userId && !userId) {
+        userId = data.userId;
+        localStorage.setItem("userId", userId);
+      }
+
+      if (data && data.message) {
+        let formattedMessage = marked.parse(data.message); // Convert Markdown to HTML
+        chatBox.innerHTML += `<div class="ai-message">${formattedMessage}</div>`;
+      } else {
+        chatBox.innerHTML += `<div class="ai-message">No response received.</div>`;
+      }
+    } catch (error) {
+      loadingIndicator.style.display = "none";
+      chatBox.innerHTML += `<div class="ai-message">An error occurred. Please try again.</div>`;
+    }
+    chatBox.scrollTop = chatBox.scrollHeight;
+  }
+
+  let tasks = [];
+  let visibleTaskCount = 5;
+
+  async function loadTasks() {
+    const res = await fetch('/tasks');
+    tasks = await res.json();
+    tasks.sort((a, b) => b.TaskID - a.TaskID);
+    renderTasks();
+  }
+
+  function renderTasks() {
+    const tasksList = document.getElementById('tasks-list');
+    tasksList.innerHTML = tasks.slice(0, visibleTaskCount).map(task => `
+        <div class="task-card" style="border-left: 5px solid ${task.Color}">
+          <h3>${task.TaskName}</h3>
+          <p>Due: ${new Date(task.DueDate).toLocaleString()}</p>
+          <p>Priority: ${task.PriorityID}</p>
+          <p>Category: ${task.Category}</p>
+        </div>
+      `).join('');
+
+    document.getElementById("show-more-btn").style.display = visibleTaskCount < tasks.length ? "block" : "none";
+  }
+
+  function showMoreTasks() {
+    visibleTaskCount += 5;
+    renderTasks();
+  }
+
+  window.onload = loadTasks;
+</script>
+</body>
+</html>
