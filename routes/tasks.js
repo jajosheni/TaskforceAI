@@ -56,7 +56,10 @@ router.delete('/:id', (req, res) => {
     res.json({ message: "Task deleted" });
 });
 
+
+// ========================================
 // Function to call Python API for analysis
+// ========================================
 const analyzeTasks = async (tasks) => {
     try {
         const response = await axios.post('http://127.0.0.1:8000/analyze', tasks, {
@@ -77,7 +80,7 @@ router.post('/analyze', async (req, res) => {
     res.json(analysis);
 });
 
-// Route: Generate Weekly Report (Dummy for now)
+// Route: Generate Weekly Report (Dummy)
 router.get('/report', (req, res) => {
     res.json({
         message: "Weekly report feature coming soon",
