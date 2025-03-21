@@ -1,0 +1,47 @@
+[
+  {
+    "UserID": 122916,
+    "TotalAssignments": 5,
+    "TotalStoryPoints": 35,
+    "Availability": "Available",
+    "AverageCompletionTime": 5.2,
+    "EfficiencyScore": 0.85,
+    "TaskCategories": [ "Development", "Product" ]
+  },
+  {
+    "UserID": 126306,
+    "TotalAssignments": 7,
+    "TotalStoryPoints": 58,
+    "Availability": "Busy",
+    "AverageCompletionTime": 8.1,
+    "EfficiencyScore": 0.72,
+    "TaskCategories": [ "Compliance", "Finance", "Regulatory" ]
+  },
+  {
+    "UserID": 103642,
+    "TotalAssignments": 4,
+    "TotalStoryPoints": 37,
+    "Availability": "Available",
+    "AverageCompletionTime": 3.7,
+    "EfficiencyScore": 0.91,
+    "TaskCategories": [ "IT", "Security", "Finance" ]
+  },
+  {
+    "UserID": 113859,
+    "TotalAssignments": 5,
+    "TotalStoryPoints": 35,
+    "Availability": "Overloaded",
+    "AverageCompletionTime": 10.5,
+    "EfficiencyScore": 0.65,
+    "TaskCategories": [ "Marketing", "Legal", "Security" ]
+  },
+  {
+    "UserID": 105820,
+    "TotalAssignments": 3,
+    "TotalStoryPoints": 26,
+    "Availability": "Available",
+    "AverageCompletionTime": 4.5,
+    "EfficiencyScore": 0.88,
+    "TaskCategories": [ "Product" ]
+  }
+]

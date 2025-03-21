@@ -1,7 +1,17 @@
 const axios = require("axios");
+const https = require("https");
+
+const httpsAgent = new https.Agent({
+    rejectUnauthorized: false
+});
+const ML_SERVER = process.env.ML_SERVER;
+const tasksEndpoint = "http://127.0.0.1:3000/tasks";
 
 module.exports = {
-    createTask: async ({newAssignee, newTaskName, newDueDate, newCategory, newColor}) => {
+    createTask: async ({
+                           newAssignee, newTaskName, newDueDate, newCategory, newColor,
+                           approverId, comment, recommendedUserId, status, storyPoints, priorityId
+                       }) => {
         try {
             let newData = {
                 AssignedUserID: newAssignee,
@@ -9,9 +19,15 @@ module.exports = {
                 DueDate: newDueDate,
                 Category: newCategory,
                 Color: newColor,
+                ApproverUserID: approverId,
+                Comment: comment,
+                RecommendedUserID: recommendedUserId,
+                Status: status,
+                TotalStoryPoints: storyPoints,
+                PriorityID: priorityId
             };
 
-            const response = await axios.post(`http://127.0.0.1:3000/tasks`, newData);
+            const response = await axios.post(tasksEndpoint, newData);
             return {success: true, data: response.data};
         } catch (error) {
             console.error("Error creating task:", error.response?.data || error.message);
@@ -19,7 +35,10 @@ module.exports = {
         }
     },
 
-    updateTask: async ({taskId, newAssignee, newTaskName, newDueDate, newCategory, newColor}) => {
+    updateTask: async ({
+                           taskId, newAssignee, newTaskName, newDueDate, newCategory, newColor,
+                           approverId, comment, recommendedUserId, status, storyPoints, priorityId
+                       }) => {
         try {
             let updateData = {};
             if (newAssignee) updateData.AssignedUserID = newAssignee;
@@ -27,12 +46,18 @@ module.exports = {
             if (newDueDate) updateData.DueDate = newDueDate;
             if (newCategory) updateData.Category = newCategory;
             if (newColor) updateData.Color = newColor;
+            if (approverId) updateData.ApproverUserID = approverId;
+            if (comment) updateData.Comment = comment;
+            if (recommendedUserId) updateData.RecommendedUserID = recommendedUserId;
+            if (status) updateData.Status = status;
+            if (storyPoints !== undefined) updateData.TotalStoryPoints = storyPoints;
+            if (priorityId) updateData.PriorityID = priorityId;
 
             if (Object.keys(updateData).length === 0) {
                 return {success: false, message: "No valid update fields provided."};
             }
 
-            const response = await axios.put(`http://127.0.0.1:3000/tasks/${taskId}`, updateData);
+            const response = await axios.put(`${tasksEndpoint}/${taskId}`, updateData);
             return {success: true, data: response.data};
         } catch (error) {
             console.error("Error updating task:", error.response?.data || error.message);
@@ -40,47 +65,135 @@ module.exports = {
         }
     },
 
+    sendNotification: async ({recipient, message, priority}) => {
+        console.log(`🔔 Notification sent to ${recipient}: "${message}" (Priority: ${priority})`);
+        return {success: true, data: `I have notified ${recipient} about: "${message}"`};
+    },
+
+
     detectOverdueTasks: async () => {
         try {
-            const response = await axios.get("http://127.0.0.1:3000/tasks");
-            const tasks = response.data;
-            const overdueTasks = tasks.filter(task => new Date(task.DueDate) < new Date());
-            return {success: true, data: overdueTasks};
+            const response = await axios.get(ML_SERVER + "/api/Predicate/lateness/all", {
+                httpsAgent
+            });
+            return { success: true, data: response.data };
         } catch (error) {
-            console.error("Error fetching tasks:", error.message);
-            return {success: false, error: "Failed to retrieve tasks"};
+            console.error("ML API Error:", error.message);
+            return { success: false, error: "Failed to fetch ML lateness prediction" };
         }
     },
 
     performRootCauseAnalysis: async () => {
-        return {success: true, data: ["Overloaded assignees", "Unresolved dependencies", "Lack of updates"]};
-    },
-
-    generatePredictiveAlerts: async () => {
-        return {
-            success: true,
-            data: ["Task X is nearing deadline without updates", "Task Y has a history of delays"]
-        };
-    },
-
-    generateRecommendations: async () => {
-        return {success: true, data: ["Reassign to a less busy team member", "Send automatic reminders"]};
-    },
-
-    generateWeeklyReport: async () => {
         try {
-            const response = await axios.get("http://127.0.0.1:3000/tasks");
-            const tasks = response.data;
-            const overdueCount = tasks.filter(task => new Date(task.DueDate) < new Date()).length;
-            return {success: true, data: `Weekly summary: ${overdueCount} tasks are overdue.`};
-        } catch (error) {
-            console.error("Error generating report:", error.message);
-            return {success: false, error: "Failed to generate report"};
+            const response = await axios.get(`${ML_SERVER}/api/Predicate/tasks/info`, { httpsAgent });
+            const summary = response.data;
+
+            const findings = [];
+
+            if (summary.ReassignedTasksRatio > 0.3) findings.push("High reassignment rate suggests confusion or mismanagement.");
+            if (summary.AverageCommentLength < 20) findings.push("Short comments suggest lack of detail in communication.");
+            if (summary.OverduePercentage > 0.25) findings.push("A significant portion of tasks are overdue.");
+
+            return {
+                success: true,
+                data: findings.length ? findings : ["No major root causes detected from metadata."]
+            };
+        } catch (err) {
+            console.error("Root Cause Analysis Error:", err.message);
+            return { success: false, error: "Failed to perform root cause analysis" };
         }
     },
 
-    sendNotification: async ({recipient, message, priority}) => {
-        console.log(`🔔 Notification sent to ${recipient}: "${message}" (Priority: ${priority})`);
-        return {success: true, data: `I have notified ${recipient} about: "${message}"`};
+    generatePredictiveAlerts: async () => {
+        try {
+            const response = await axios.get(`${ML_SERVER}/api/Predicate/lateness/all`, {
+                httpsAgent
+            });
+
+            const predictions = response.data.data;
+
+            const riskyTasks = predictions.filter(p => p.probability >= 50);
+
+            return {
+                success: true,
+                data: riskyTasks.map(p => ({
+                    taskId: p.taskID,
+                    taskName: p.taskName,
+                    dueDate: p.dueDate,
+                    risk: `${p.probability.toFixed(1)}%`
+                }))
+            };
+        } catch (error) {
+            console.error("Predictive Alerts Error:", error.message);
+            return { success: false, error: "Failed to generate predictive alerts" };
+        }
+    },
+
+    generateRecommendations: async ({ taskId }) => {
+        try {
+            const response = await axios.get(`${ML_SERVER}/api/Predicate/recommend/${taskId}`, { httpsAgent });
+            const rec = response.data;
+
+            return {
+                success: true,
+                data: [
+                    `Recommended assignee: User ${rec.RecommendedUserID}`,
+                    `Confidence: ${Math.round(rec.Confidence * 100)}%`
+                ]
+            };
+        } catch (err) {
+            console.error("Recommendation Error:", err.message);
+            return { success: false, error: "Could not fetch recommendation for task." };
+        }
+    },
+
+    getLatenessPrediction: async ({ taskId }) => {
+        try {
+            const response = await axios.get(`${ML_SERVER}/api/Predicate/lateness/${taskId}`, {
+                httpsAgent
+            });
+
+            const { isLate, probability } = response.data.data;
+
+            return {
+                success: true,
+                data: {
+                    taskId,
+                    isLate,
+                    probability: `${probability.toFixed(2)}%`
+                }
+            };
+        } catch (err) {
+            console.error("Lateness Prediction Error:", err.message);
+            return { success: false, error: "Failed to fetch lateness prediction." };
+        }
+    },
+
+    getReassignmentSuggestion: async ({ taskId }) => {
+        try {
+            const response = await axios.get(`${ML_SERVER}/api/Predicate/reassignment/${taskId}`, {
+                httpsAgent
+            });
+
+            const suggestedUserId = response.data?.data;
+
+            return {
+                success: true,
+                data: `Suggested user to reassign Task ${taskId}: User ${suggestedUserId}`
+            };
+        } catch (error) {
+            console.error("Reassignment Suggestion Error:", error.message);
+            return { success: false, error: "Could not fetch reassignment suggestion." };
+        }
+    },
+
+    trainModel: async () => {
+        try {
+            await axios.post(`${ML_SERVER}/api/Predicate/train`, {}, { httpsAgent });
+            return { success: true, data: "Model training started successfully." };
+        } catch (err) {
+            console.error("Train Error:", err.message);
+            return { success: false, error: "Failed to trigger model training." };
+        }
     }
 };

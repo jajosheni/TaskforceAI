@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const OpenAI = require("openai");
-const { v4: uuidv4 } = require("uuid");
+const {v4: uuidv4} = require("uuid");
 
 const tools = require("../tools");
 const aiFunctions = require("../aiFunctions");
@@ -12,7 +12,7 @@ const debugLog = (message, data = null) => {
     }
 };
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const openai = new OpenAI({apiKey: process.env.OPENAI_API_KEY});
 
 const instructions = `
 You are an AI Task Management Assistant. Your role is to analyze overdue tasks, detect potential issues, and suggest recommendations based on task data. Use function calls whenever necessary to fetch the latest task information before responding.
@@ -22,6 +22,7 @@ DO NOT SUGGEST DATA THAT YOU DO NOT HAVE.
 - Be concise but clear: Provide direct answers with actionable steps.
 - Use structured formatting: Numbered or bulleted lists for clarity.
 - When a general status update is requested, reset memory of specific task conversations.
+- Always provide taskId when available as data.
 `;
 
 const chatHistory = {};
@@ -29,7 +30,7 @@ const MAX_HISTORY = 10; // Limit history size
 
 router.post("/", async (req, res) => {
     try {
-        let { messages, userId } = req.body;
+        let {messages, userId} = req.body;
 
         if (!userId) {
             userId = `guest_${uuidv4()}`;
@@ -48,7 +49,7 @@ router.post("/", async (req, res) => {
         }
 
         // Construct full input with history and system instructions
-        let fullMessages = [{ role: "system", content: instructions }, ...chatHistory[userId]];
+        let fullMessages = [{role: "system", content: instructions}, ...chatHistory[userId]];
 
         // First AI response
         let response = await openai.responses.create({
@@ -65,14 +66,20 @@ router.post("/", async (req, res) => {
         if (functionCalls.length === 0) {
             debugLog("AI Response:", output);
 
-            const aiMessage = response.output_text || "No response received from AI.";
+            let aiMessage;
+            if (response.output_text) {
+                aiMessage = response.output_text;
+            } else {
+                aiMessage = "No response received from AI.";
+                console.error(response);
+            }
 
             debugLog("Sending formatted AI response:", aiMessage);
 
             // Add AI message to history
-            chatHistory[userId].push({ role: "assistant", content: aiMessage });
+            chatHistory[userId].push({role: "assistant", content: aiMessage});
 
-            return res.json({ message: aiMessage, userId });
+            return res.json({message: aiMessage, userId});
         }
 
         debugLog("Function Calls Detected:", functionCalls);
@@ -80,7 +87,7 @@ router.post("/", async (req, res) => {
         let toolOutputs = [];
 
         for (let funcCall of functionCalls) {
-            let { name, arguments, call_id } = funcCall;
+            let {name, arguments, call_id} = funcCall;
             let args = JSON.parse(arguments);
 
             if (aiFunctions[name]) {
@@ -101,23 +108,29 @@ router.post("/", async (req, res) => {
         // Submit function results back to OpenAI, keeping instructions & history
         response = await openai.responses.create({
             model: "gpt-4o",
-            input: [{ role: "system", content: instructions }, ...chatHistory[userId], ...functionCalls, ...toolOutputs],
+            input: [{role: "system", content: instructions}, ...chatHistory[userId], ...functionCalls, ...toolOutputs],
             tools,
         });
 
         debugLog("Full OpenAI Response:", response);
 
-        const aiMessage = response.output_text || "No response received from AI.";
+        let aiMessage;
+        if (response.output_text) {
+            aiMessage = response.output_text;
+        } else {
+            aiMessage = "No response received from AI.";
+            console.error(response);
+        }
 
         debugLog("Final AI Response:", aiMessage);
 
         // Add AI response to history
-        chatHistory[userId].push({ role: "assistant", content: aiMessage });
+        chatHistory[userId].push({role: "assistant", content: aiMessage});
 
-        res.json({ message: aiMessage, userId });
+        res.json({message: aiMessage, userId});
     } catch (error) {
         console.error("Error in chat:", error);
-        res.status(500).json({ error: error.message });
+        res.status(500).json({error: error.message});
     }
 });
 
