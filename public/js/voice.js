@@ -12,10 +12,14 @@ let audioChunks = [];
 let voiceSessionActive = false;
 let stopRequested = false;
 let audioPlayer = new Audio();
+let isSpeaking = false; // 🧠 Track TTS state
 let stopButton;
 
 const recordBtn = document.getElementById("record-btn");
 const transcribingIndicator = document.getElementById("transcribing");
+
+const skipSpeechWrapper = document.getElementById("skip-speech-wrapper");
+const skipSpeechBtn = document.getElementById("skip-speech-btn");
 
 recordBtn.addEventListener("click", () => {
     if (voiceSessionActive) {
@@ -28,23 +32,38 @@ recordBtn.addEventListener("click", () => {
 function startVoiceSession() {
     voiceSessionActive = true;
     stopRequested = false;
+
     disableInput(true);
     recordBtn.classList.add("recording");
     recordBtn.innerText = "🛑 Stop";
+    recordBtn.disabled = false; // ✅ always enabled in voice mode
+
+    skipSpeechWrapper.style.display = "block";
+    skipSpeechBtn.disabled = true;
+
     loopVoiceInput();
 }
 
 function stopVoiceSession() {
     voiceSessionActive = false;
     stopRequested = true;
+
     disableInput(false);
     recordBtn.classList.remove("recording");
     recordBtn.innerText = "🎤 Voice Assistant";
+    skipSpeechWrapper.style.display = "none";
+
     stopSpeechPlayback();
 }
 
 async function loopVoiceInput() {
     while (voiceSessionActive && !stopRequested) {
+        if (isSpeaking) {
+            // Wait until TTS is done
+            await new Promise((resolve) => setTimeout(resolve, 500));
+            continue;
+        }
+
         const text = await recordAndTranscribe();
         if (!text || text.trim().length < 2) continue;
 
@@ -57,13 +76,11 @@ async function loopVoiceInput() {
         const response = await sendToAI(text);
         appendAIMessage(response.message);
 
-        if (response.message) {
-            const shortText = response.message.length > 350
-                ? "The message is long, you can check task details in the response."
-                : response.message;
+        const shortText = response.message.length > 350
+            ? "The message is long, you can check task details in the response."
+            : response.message;
 
-            await speak(shortText);
-        }
+        await speak(shortText);
     }
 
     stopVoiceSession();
@@ -165,6 +182,8 @@ async function sendToAI(text) {
 }
 
 // --- TTS PLAYBACK ---
+skipSpeechBtn.addEventListener("click", stopSpeechPlayback);
+
 async function speak(text) {
     try {
         const res = await fetch("/voice/speak", {
@@ -175,28 +194,33 @@ async function speak(text) {
 
         const blob = await res.blob();
         audioPlayer.src = URL.createObjectURL(blob);
-        audioPlayer.play();
 
-        showStopSpeechButton();
+        isSpeaking = true; // ✅ Set flag
+        skipSpeechBtn.disabled = false;
+        audioPlayer.play();
 
         return new Promise((resolve) => {
             audioPlayer.onended = () => {
-                hideStopSpeechButton();
+                isSpeaking = false; // ✅ Clear flag
+                skipSpeechBtn.disabled = true;
                 resolve();
             };
         });
     } catch (err) {
         console.error("TTS error:", err);
+        isSpeaking = false;
+        skipSpeechBtn.disabled = true;
     }
 }
 
 function stopSpeechPlayback() {
-    if (audioPlayer && !audioPlayer.paused) {
+    if (!audioPlayer.paused) {
         audioPlayer.pause();
         audioPlayer.currentTime = 0;
-        hideStopSpeechButton();
     }
+    skipSpeechBtn.disabled = true;
 }
+
 
 function showStopSpeechButton() {
     if (!stopButton) {

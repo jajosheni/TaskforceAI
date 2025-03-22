@@ -15,10 +15,13 @@
   <div class="chat-container">
     <div id="chat-box" class="chat-box"></div>
 
-    <canvas id="waveform" width="500" height="100"></canvas>
+    <div class="loading-indicator" id="skip-speech-wrapper" style="display: none;">
+      <button id="skip-speech-btn" disabled>🛑 Skip Speech</button>
+    </div>
 
-    <div class="loading-indicator" id="loading">AI is thinking...</div>
+    <!-- Transcribing Indicator -->
     <div class="loading-indicator" id="transcribing" style="display: none;">🎙️ Transcribing...</div>
+    <div class="loading-indicator" id="loading">AI is thinking...</div>
 
     <div class="input-area">
       <input type="text" id="user-input" placeholder="Type a message..." onkeypress="handleKeyPress(event)" />
@@ -26,8 +29,7 @@
       <button id="record-btn">🎤 Voice Assistant</button>
     </div>
 
-    <div class="button-suggestions" id="button-suggestions-container">
-    </div>
+    <div class="button-suggestions" id="button-suggestions-container"></div>
   </div>
 
   <!-- Task Dashboard Section -->

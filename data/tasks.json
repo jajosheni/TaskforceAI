@@ -156,5 +156,19 @@
     "Status": "To Do",
     "TotalStoryPoints": 5,
     "PriorityID": 3
+  },
+  {
+    "TaskID": 13,
+    "AssignedUserID": 1,
+    "TaskName": "WhiteWall",
+    "DueDate": "2025-03-23",
+    "Category": "Development",
+    "Color": "#3498db",
+    "ApproverUserID": 2,
+    "Comment": "Auto-generated task",
+    "RecommendedUserID": 1,
+    "Status": "To Do",
+    "TotalStoryPoints": 3,
+    "PriorityID": 3
   }
 ]
