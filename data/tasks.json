@@ -120,13 +120,13 @@
   {
     "TaskID": 10,
     "TaskName": "Missed Compliance Review",
-    "DueDate": "2025-03-01T00:00:00",
+    "DueDate": "2025-03-23",
     "PriorityID": 2,
     "Color": "#FF5733",
-    "AssignedUserID": 126306,
+    "AssignedUserID": 122916,
     "Comment": "Missed compliance deadline, action required.",
-    "Category": "Compliance",
-    "Status": "Delayed",
+    "Category": "QA",
+    "Status": "In Progress",
     "TotalStoryPoints": 18,
     "RecommendedUserID": 122916
   },
@@ -142,5 +142,19 @@
     "Status": "Delayed",
     "TotalStoryPoints": 15,
     "RecommendedUserID": 126306
+  },
+  {
+    "TaskID": 12,
+    "AssignedUserID": 1,
+    "TaskName": "Test Creation",
+    "DueDate": "2023-12-31",
+    "Category": "Development",
+    "Color": "#FF5733",
+    "ApproverUserID": 2,
+    "Comment": "Default comment for task creation",
+    "RecommendedUserID": 3,
+    "Status": "To Do",
+    "TotalStoryPoints": 5,
+    "PriorityID": 3
   }
 ]

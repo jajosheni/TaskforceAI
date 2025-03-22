@@ -53,4 +53,22 @@ router.post('/transcribe', upload.single('audio'), async (req, res) => {
     }
 });
 
+router.post("/speak", async (req, res) => {
+    const { text } = req.body;
+    try {
+        const speech = await openai.audio.speech.create({
+            model: "tts-1",
+            voice: "nova",
+            input: text,
+        });
+        const buffer = await speech.arrayBuffer();
+        res.setHeader("Content-Type", "audio/mpeg");
+        res.send(Buffer.from(buffer));
+    } catch (error) {
+        console.error("TTS error:", error);
+        res.status(500).json({ error: "TTS failed" });
+    }
+});
+
+
 module.exports = router;

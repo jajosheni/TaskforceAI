@@ -1,6 +1,8 @@
 const axios = require("axios");
 const https = require("https");
 
+const {formatTaskPreview, formatPayload} = require("../utils");
+
 const httpsAgent = new https.Agent({
     rejectUnauthorized: false
 });
@@ -8,60 +10,86 @@ const ML_SERVER = process.env.ML_SERVER;
 const tasksEndpoint = "http://127.0.0.1:3000/tasks";
 
 module.exports = {
-    createTask: async ({
-                           newAssignee, newTaskName, newDueDate, newCategory, newColor,
-                           approverId, comment, recommendedUserId, status, storyPoints, priorityId
-                       }) => {
+    getAllTasks: async () => {
         try {
-            let newData = {
-                AssignedUserID: newAssignee,
-                TaskName: newTaskName,
-                DueDate: newDueDate,
-                Category: newCategory,
-                Color: newColor,
-                ApproverUserID: approverId,
-                Comment: comment,
-                RecommendedUserID: recommendedUserId,
-                Status: status,
-                TotalStoryPoints: storyPoints,
-                PriorityID: priorityId
-            };
-
-            const response = await axios.post(tasksEndpoint, newData);
-            return {success: true, data: response.data};
+            const response = await axios.get("http://127.0.0.1:3000/tasks");
+            return { success: true, data: response.data };
         } catch (error) {
-            console.error("Error creating task:", error.response?.data || error.message);
-            return {success: false, error: "Failed to create task"};
+            console.error("Error fetching tasks:", error.message);
+            return { success: false, error: "Could not retrieve task list." };
         }
     },
 
-    updateTask: async ({
-                           taskId, newAssignee, newTaskName, newDueDate, newCategory, newColor,
-                           approverId, comment, recommendedUserId, status, storyPoints, priorityId
-                       }) => {
+    createTask: async (params) => {
+        const message =
+            `📝 You're about to create a task with the following details:\n\n${formatTaskPreview(params)}\n\n✅ Say "Confirm" to proceed or "Cancel" to discard.`;
+
+        return {
+            success: true,
+            pending: true,
+            message,
+            action: "confirmCreateTask",
+            args: params
+        };
+    },
+
+    confirmCreateTask: async (args) => {
         try {
-            let updateData = {};
-            if (newAssignee) updateData.AssignedUserID = newAssignee;
-            if (newTaskName) updateData.TaskName = newTaskName;
-            if (newDueDate) updateData.DueDate = newDueDate;
-            if (newCategory) updateData.Category = newCategory;
-            if (newColor) updateData.Color = newColor;
-            if (approverId) updateData.ApproverUserID = approverId;
-            if (comment) updateData.Comment = comment;
-            if (recommendedUserId) updateData.RecommendedUserID = recommendedUserId;
-            if (status) updateData.Status = status;
-            if (storyPoints !== undefined) updateData.TotalStoryPoints = storyPoints;
-            if (priorityId) updateData.PriorityID = priorityId;
-
-            if (Object.keys(updateData).length === 0) {
-                return {success: false, message: "No valid update fields provided."};
-            }
-
-            const response = await axios.put(`${tasksEndpoint}/${taskId}`, updateData);
-            return {success: true, data: response.data};
+            const response = await axios.post(tasksEndpoint, formatPayload(args));
+            return { success: true, data: response.data };
         } catch (error) {
-            console.error("Error updating task:", error.response?.data || error.message);
-            return {success: false, error: "Failed to update task"};
+            console.error("Create Task Error:", error.message);
+            return { success: false, error: "Failed to create task" };
+        }
+    },
+
+    updateTask: async (params) => {
+        const { taskId, ...fields } = params;
+
+        let changes = Object.entries(fields).map(([key, val]) =>
+            `- **${key}**: \`${val}\``
+        ).join("\n");
+
+        const message =
+            `🛠️ You're about to update Task #${taskId} with:\n\n${changes}\n\n✅ Say "Confirm" to proceed or "Cancel" to discard.`;
+
+        return {
+            success: true,
+            pending: true,
+            message,
+            action: "confirmUpdateTask",
+            args: params
+        };
+    },
+
+    confirmUpdateTask: async (args) => {
+        const { taskId, ...updateData } = args;
+        try {
+            const response = await axios.put(`${tasksEndpoint}/${taskId}`, formatPayload(updateData));
+            return { success: true, data: response.data };
+        } catch (error) {
+            console.error("Update Task Error:", error.message);
+            return { success: false, error: "Failed to update task" };
+        }
+    },
+
+    requestDeleteTask: async ({ taskId }) => {
+        return {
+            success: true,
+            data: `⚠️ You requested to delete Task ${taskId}. Please confirm by saying: "Confirm delete task ${taskId}".`
+        };
+    },
+
+    confirmDeleteTask: async ({ taskId }) => {
+        try {
+            const response = await axios.delete(`${tasksEndpoint}/${taskId}`);
+            return {
+                success: true,
+                data: `✅ Task ${taskId} was successfully deleted.`
+            };
+        } catch (err) {
+            console.error("Delete Error:", err.message);
+            return { success: false, error: "Failed to delete the task." };
         }
     },
 
