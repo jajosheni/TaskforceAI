@@ -1,61 +1,62 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>TaskForce AI - A challenge</title>
-  <link rel="stylesheet" href="/stylesheets/style.css"/>
-  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>TaskForce AI - A challenge</title>
+    <link rel="stylesheet" href="/stylesheets/style.css"/>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 <body>
 <div class="container">
-  <h1>TaskForce AI</h1>
+    <h1>TaskForce AI</h1>
 
-  <!-- Chat Section -->
-  <div class="chat-container">
-    <div id="chat-box" class="chat-box"></div>
+    <!-- Chat Section -->
+    <div class="chat-container">
+        <div id="chat-box" class="chat-box"></div>
 
-    <div class="loading-indicator" id="skip-speech-wrapper" style="display: none;">
-      <button id="skip-speech-btn" disabled>🛑 Skip Speech</button>
+        <div class="loading-indicator" id="skip-speech-wrapper" style="display: none;">
+            <canvas id="recording-waveform" width="200" height="40" style="margin-bottom: 6px;"></canvas>
+            <button id="skip-speech-btn" disabled style="display: none">🛑 Skip Speech</button>
+        </div>
+
+        <!-- Transcribing Indicator -->
+        <div class="loading-indicator" id="transcribing" style="display: none;">🎙️ Transcribing...</div>
+        <div class="loading-indicator" id="loading">AI is thinking...</div>
+
+        <div class="input-area">
+            <input type="text" id="user-input" placeholder="Type a message..." onkeypress="handleKeyPress(event)"/>
+            <button id="send-btn">Send</button>
+            <button id="record-btn">🎤 Voice Assistant</button>
+        </div>
+
+        <div class="button-suggestions" id="button-suggestions-container"></div>
     </div>
 
-    <!-- Transcribing Indicator -->
-    <div class="loading-indicator" id="transcribing" style="display: none;">🎙️ Transcribing...</div>
-    <div class="loading-indicator" id="loading">AI is thinking...</div>
-
-    <div class="input-area">
-      <input type="text" id="user-input" placeholder="Type a message..." onkeypress="handleKeyPress(event)" />
-      <button id="send-btn">Send</button>
-      <button id="record-btn">🎤 Voice Assistant</button>
+    <!-- Task Dashboard Section -->
+    <div class="dashboard">
+        <h2>Task Dashboard</h2>
+        <div id="tasks-list" class="tasks-list"></div>
+        <div class="show-more">
+            <button id="show-more-btn">Show More</button>
+        </div>
     </div>
-
-    <div class="button-suggestions" id="button-suggestions-container"></div>
-  </div>
-
-  <!-- Task Dashboard Section -->
-  <div class="dashboard">
-    <h2>Task Dashboard</h2>
-    <div id="tasks-list" class="tasks-list"></div>
-    <div class="show-more">
-      <button id="show-more-btn">Show More</button>
-    </div>
-  </div>
 </div>
 
 <!-- Modular Scripts -->
 <script>
-  let userId = localStorage.getItem("userId");
-  if (!userId) {
-    userId = "guest_" + Math.floor(Math.random() * 100000);
-    localStorage.setItem("userId", userId);
-  }
+    let userId = localStorage.getItem("userId");
+    if (!userId) {
+        userId = "guest_" + Math.floor(Math.random() * 100000);
+        localStorage.setItem("userId", userId);
+    }
 
-  function handleKeyPress(event) {
-    if (event.key === "Enter") sendMessage();
-  }
+    function handleKeyPress(event) {
+        if (event.key === "Enter") sendMessage();
+    }
 
-  document.getElementById("send-btn").addEventListener("click", () => sendMessage());
-  document.getElementById("show-more-btn").addEventListener("click", () => showMoreTasks());
+    document.getElementById("send-btn").addEventListener("click", () => sendMessage());
+    document.getElementById("show-more-btn").addEventListener("click", () => showMoreTasks());
 </script>
 
 <script type="module" src="/js/agent.js"></script>

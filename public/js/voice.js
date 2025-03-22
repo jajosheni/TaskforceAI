@@ -15,6 +15,10 @@ let audioPlayer = new Audio();
 let isSpeaking = false; // 🧠 Track TTS state
 let stopButton;
 
+let isActivelyRecording = false;
+const waveformCanvas = document.getElementById("recording-waveform");
+const waveformCtx = waveformCanvas.getContext("2d");
+
 const recordBtn = document.getElementById("record-btn");
 const transcribingIndicator = document.getElementById("transcribing");
 
@@ -100,10 +104,15 @@ async function recordAndTranscribe() {
     audioChunks = [];
 
     mediaRecorder = new MediaRecorder(stream);
+    // Wait 0.5 seconds to make things more responsive
+    await new Promise(resolve => setTimeout(resolve, 500));
 
     return new Promise((resolve) => {
         mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data);
         mediaRecorder.onstop = async () => {
+            isActivelyRecording = false;
+            waveformCanvas.classList.remove("listening");
+
             stream.getTracks().forEach(track => track.stop());
 
             const blob = new Blob(audioChunks, { type: 'audio/webm' });
@@ -127,7 +136,12 @@ async function recordAndTranscribe() {
             }
         };
 
+
         mediaRecorder.start();
+        isActivelyRecording = true;
+        waveformCanvas.classList.add("listening");
+        drawWaveform(analyser);
+
         checkSilence(analyser, dataArray, () => {
             mediaRecorder.stop();
         });
@@ -218,7 +232,9 @@ function stopSpeechPlayback() {
         audioPlayer.pause();
         audioPlayer.currentTime = 0;
     }
+
     skipSpeechBtn.disabled = true;
+    isSpeaking = false;
 }
 
 
@@ -235,4 +251,37 @@ function showStopSpeechButton() {
 
 function hideStopSpeechButton() {
     if (stopButton) stopButton.style.display = "none";
+}
+
+function drawWaveform(analyser) {
+    const bufferLength = analyser.fftSize;
+    const dataArray = new Uint8Array(bufferLength);
+
+    function draw() {
+        if (!isActivelyRecording) return;
+
+        analyser.getByteTimeDomainData(dataArray);
+
+        waveformCtx.clearRect(0, 0, waveformCanvas.width, waveformCanvas.height);
+        waveformCtx.beginPath();
+
+        const sliceWidth = waveformCanvas.width / bufferLength;
+        let x = 0;
+
+        for (let i = 0; i < bufferLength; i++) {
+            const v = dataArray[i] / 128.0;
+            const y = (v * waveformCanvas.height) / 2;
+            i === 0 ? waveformCtx.moveTo(x, y) : waveformCtx.lineTo(x, y);
+            x += sliceWidth;
+        }
+
+        waveformCtx.lineTo(waveformCanvas.width, waveformCanvas.height / 2);
+        waveformCtx.strokeStyle = "#2ea043";
+        waveformCtx.lineWidth = 2;
+        waveformCtx.stroke();
+
+        requestAnimationFrame(() => draw());
+    }
+
+    draw();
 }

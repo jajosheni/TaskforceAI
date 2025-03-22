@@ -173,3 +173,15 @@ button:disabled {
   cursor: not-allowed;
 }
 
+#recording-waveform {
+  border-radius: 8px;
+  background-color: #161b22;
+  border: 1px solid #2d333b;
+  opacity: 0.3; /* Default dimmed */
+  transition: opacity 0.3s ease;
+}
+
+#recording-waveform.listening {
+  opacity: 1;
+  box-shadow: 0 0 8px #2ea043;
+}
