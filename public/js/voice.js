@@ -60,6 +60,20 @@ function stopVoiceSession() {
     stopSpeechPlayback();
 }
 
+function shouldIgnoreTranscript(text) {
+    if (!text) return true;
+
+    const cleaned = text.trim().toLowerCase();
+    const ignorePhrases = [
+        "you", "bye", "uh", "hmm", "ok", "okay", "yeah", "thank you", "thank you. bye.", "silence", "silence."
+    ];
+
+    return (
+        cleaned.length < 3 ||
+        ignorePhrases.includes(cleaned)
+    );
+}
+
 async function loopVoiceInput() {
     while (voiceSessionActive && !stopRequested) {
         if (isSpeaking) {
@@ -69,7 +83,10 @@ async function loopVoiceInput() {
         }
 
         const text = await recordAndTranscribe();
-        if (!text || text.trim().length < 2) continue;
+        if (shouldIgnoreTranscript(text)) {
+            console.log("⏭️ Ignored:", text);
+            continue;
+        }
 
         if (text.toLowerCase().includes("stop")) {
             stopVoiceSession();
@@ -81,7 +98,7 @@ async function loopVoiceInput() {
         appendAIMessage(response.message);
 
         const shortText = response.message.length > 350
-            ? "The message is long, you can check task details in the response."
+            ? "Please check task details in the response and let me know how you would like to continue next."
             : response.message;
 
         await speak(shortText);
@@ -116,6 +133,12 @@ async function recordAndTranscribe() {
             stream.getTracks().forEach(track => track.stop());
 
             const blob = new Blob(audioChunks, { type: 'audio/webm' });
+            if (blob.size < 50000) {
+                console.log("🪵 Skipping short recording. Size:", blob.size);
+                resolve("");
+                return;
+            }
+
             const formData = new FormData();
             formData.append("audio", blob, "recording.webm");
 
@@ -142,9 +165,11 @@ async function recordAndTranscribe() {
         waveformCanvas.classList.add("listening");
         drawWaveform(analyser);
 
-        checkSilence(analyser, dataArray, () => {
-            mediaRecorder.stop();
-        });
+        setTimeout(() => {
+            checkSilence(analyser, dataArray, () => {
+                mediaRecorder.stop();
+            });
+        }, 200); // wait 200ms to not record mic spike
     });
 }
 
@@ -158,7 +183,7 @@ function checkSilence(analyser, dataArray, onSilence) {
 
         if (volume < 10) {
             if (silenceStart === null) silenceStart = Date.now();
-            else if (Date.now() - silenceStart > 1000) onSilence();
+            else if (Date.now() - silenceStart > 2000) onSilence();
         } else {
             silenceStart = null;
         }

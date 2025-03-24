@@ -10,8 +10,8 @@
     "Comment": "Waiting for review by approver.",
     "Category": "Development",
     "Status": "In Progress",
-    "TotalStoryPoints": null,
-    "RecommendedUserID": 122916
+    "TotalStoryPoints": 10,
+    "RecommendedUserID": 103642
   },
   {
     "TaskID": 2,
@@ -119,14 +119,14 @@
   },
   {
     "TaskID": 10,
-    "TaskName": "updated task",
-    "DueDate": "2025-03-23",
+    "TaskName": "Missed Compliance Review",
+    "DueDate": "2025-03-01T00:00:00",
     "PriorityID": 2,
     "Color": "#FF5733",
-    "AssignedUserID": 122916,
+    "AssignedUserID": 126306,
     "Comment": "Missed compliance deadline, action required.",
-    "Category": "QA",
-    "Status": "Review",
+    "Category": "Compliance",
+    "Status": "Delayed",
     "TotalStoryPoints": 18,
     "RecommendedUserID": 122916
   },
@@ -142,47 +142,6 @@
     "Status": "Delayed",
     "TotalStoryPoints": 15,
     "RecommendedUserID": 126306
-  },
-  {
-    "TaskID": 12,
-    "AssignedUserID": 1,
-    "TaskName": "Test Creation",
-    "DueDate": "2023-12-31",
-    "Category": "Development",
-    "Color": "#FF5733",
-    "ApproverUserID": 2,
-    "Comment": "Default comment for task creation",
-    "RecommendedUserID": 3,
-    "Status": "To Do",
-    "TotalStoryPoints": 5,
-    "PriorityID": 3
-  },
-  {
-    "TaskID": 13,
-    "AssignedUserID": 1,
-    "TaskName": "WhiteWall",
-    "DueDate": "2025-03-23",
-    "Category": "Development",
-    "Color": "#3498db",
-    "ApproverUserID": 2,
-    "Comment": "Auto-generated task",
-    "RecommendedUserID": 1,
-    "Status": "To Do",
-    "TotalStoryPoints": 3,
-    "PriorityID": 3
-  },
-  {
-    "TaskID": 14,
-    "AssignedUserID": 1,
-    "TaskName": "Final Test",
-    "DueDate": "2025-03-31",
-    "Category": "Testing",
-    "Color": "#FF5733",
-    "ApproverUserID": 2,
-    "Comment": "Initial test task setup",
-    "RecommendedUserID": 3,
-    "Status": "To Do",
-    "TotalStoryPoints": 5,
-    "PriorityID": 3
   }
+
 ]
