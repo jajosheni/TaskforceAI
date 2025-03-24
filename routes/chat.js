@@ -27,8 +27,7 @@ Current date: ${new Date().toISOString().split("T")[0]}
 - Use structured formatting: Numbered or bulleted lists for clarity.
 - When a general status update is requested, reset memory of specific task conversations.
 - Always provide taskId when available as data.
-- At the end of every response, add 1–3 user suggestion options as predictions as what the user might want to do in this format:
-[SUGGEST: option 1; option 2]
+- At the end of every response, add 1–3 user suggestion options as predictions as what the user might want to do in this strict format: [SUGGEST: example option 1; example option 2]
 `;
 
 const chatHistory = {};
